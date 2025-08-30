@@ -1,0 +1,94 @@
+<html>
+<head>
+  <title>Open Arena DOOM Shooter - Big Map</title>
+  <style>
+    body {#gun {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      pointer-events: none;
+      background: none;
+    }
+    #gun-name {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 24px;
+      text-shadow: 1px 1px 3px black;
+    }
+    #ammo-count {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-size: 24px;
+      text-shadow: 1px 1px 3px black;
+    }
+    #score-count {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      color: white;
+      font-size: 24px;
+      text-shadow: 1px 1px 3px black;
+    }
+
+    /* --- Menu --- */
+    #menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 10;
+    }
+    #menu h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 5px black;
+    }
+    #menu p {
+      font-size: 24px;
+      margin-bottom: 40px;
+      text-shadow: 1px 1px 3px black;
+    }
+    .menu-button {
+      background: darkred;
+      color: white;
+      font-size: 24px;
+      padding: 15px 40px;
+      margin: 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 10px;
+      box-shadow: 2px 2px 5px black;
+      transition: 0.2s;
+    }
+    .menu-button:hover {
+      background: red;
+    }
+    #credits-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    #credits-screen p {
+      font-size: 24px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
