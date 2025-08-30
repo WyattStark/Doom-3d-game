@@ -1,0 +1,284 @@
+<html>
+<head>
+  <title>Open Arena DOOM Shooter - Big Map</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      cursor: none;
+    }
+    canvas {
+      display: block;
+      background: transparent;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #gun {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      pointer-events: none;
+      background: none;
+    }
+    #gun-name {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 24px;
+      font-family: sans-serif;
+      text-shadow: 1px 1px 3px black;
+    }
+    #ammo-count {
+      position: absolute;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 20px;
+      font-family: sans-serif;
+      text-shadow: 1px 1px 3px black;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="gun-name">Shotgun</div>
+<div id="ammo-count">2 / 2</div>
+<img id="gun" src="shotgun/idle.png">
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const gun = document.getElementById("gun");
+const gunName = document.getElementById("gun-name");
+const ammoCount = document.getElementById("ammo-count");
+
+// Resize canvas
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- Map ---
+const mapSize = 100;
+const map = Array(mapSize).fill(0).map(() => Array(mapSize).fill(0));
+for (let i = 0; i < mapSize; i++) {
+  map[0][i] = 1;
+  map[mapSize-1][i] = 1;
+  map[i][0] = 1;
+  map[i][mapSize-1] = 1;
+}
+
+// Player
+let posX = mapSize / 2 + 0.5, posY = mapSize / 2 + 0.5;
+let playerAngle = Math.PI;
+const planeLength = 1.0;
+const moveSpeed = 0.08;
+let keys = {};
+
+// Mouse look
+canvas.addEventListener("click", () => { canvas.requestPointerLock(); });
+document.addEventListener("pointerlockchange", () => {
+  if (document.pointerLockElement === canvas) document.addEventListener("mousemove", onMouseMove);
+  else document.removeEventListener("mousemove", onMouseMove);
+});
+const sensitivity = 0.0025;
+function onMouseMove(e) {
+  playerAngle += e.movementX * sensitivity;
+  if (playerAngle < 0) playerAngle += 2*Math.PI;
+  if (playerAngle > 2*Math.PI) playerAngle -= 2*Math.PI;
+}
+
+// --- Weapons ---
+const weapons = {
+  shotgun: {
+    frames: ["idle.png","shoot.png","shoot2.png","shoot3.png"],
+    reloadFrames: ["reload1.png","reload2.png","reload3.png","reload 4.png","reload 5.png", "reload 6.png","reload 7.png", "reload 8.png", "relaod 9.png", "idle.png", ],
+    sound: "shotgun.wav",
+    reloadSound: "shotgun-reload.wav",
+    width: 300,
+    ammoMax: 2,
+    damage: 7
+  },
+  pistol: {
+    frames: ["pistol-idle.png","pistol-shoot.png","pistol-shoot2.png","pistol-shoot3.png"],
+    reloadFrames: ["pistol-reload1.png","pistol-reload2.png","pistol-reload3.png", "pistol-idle.png"],
+    sound: "pistol.wav",
+    reloadSound: "pistol-reload.wav",
+    width: 200,
+    ammoMax: 8,
+    damage: 3
+  }
+};
+
+let currentWeapon = "shotgun";
+let ammo = weapons[currentWeapon].ammoMax;
+let isShooting = false;
+let isReloading = false;
+
+// Preload images
+const preloadedImages = {};
+for (let w in weapons) {
+  preloadedImages[w] = { frames: [], reload: [] };
+  weapons[w].frames.forEach(src => { const img = new Image(); img.src = src; preloadedImages[w].frames.push(img); });
+  weapons[w].reloadFrames.forEach(src => { const img = new Image(); img.src = src; preloadedImages[w].reload.push(img); });
+}
+
+// Movement keys
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+// Switch weapons
+document.addEventListener("keydown", e => {
+  if (e.key === "1") switchWeapon("shotgun");
+  if (e.key === "2") switchWeapon("pistol");
+  if (e.key === "r") reloadWeapon();
+});
+
+function switchWeapon(weapon) {
+  currentWeapon = weapon;
+  ammo = weapons[weapon].ammoMax;
+  gun.src = preloadedImages[weapon].frames[0].src;
+  gun.style.width = weapons[weapon].width + "px";
+  gunName.innerText = weapon.charAt(0).toUpperCase() + weapon.slice(1);
+  updateAmmoDisplay();
+}
+
+function updateAmmoDisplay() {
+  ammoCount.innerText = `${ammo} / ${weapons[currentWeapon].ammoMax}`;
+}
+
+// Shoot weapon
+function shootWeapon() {
+  if (isShooting || isReloading || ammo <= 0) return;
+  isShooting = true;
+  ammo--;
+  updateAmmoDisplay();
+  const weapon = weapons[currentWeapon];
+  const sound = new Audio(weapon.sound);
+  sound.currentTime = 0;
+  sound.play();
+
+  let frameIndex = 1;
+  gun.src = preloadedImages[currentWeapon].frames[frameIndex].src;
+  const anim = setInterval(() => {
+    frameIndex++;
+    if (frameIndex < preloadedImages[currentWeapon].frames.length) {
+      gun.src = preloadedImages[currentWeapon].frames[frameIndex].src;
+    } else {
+      clearInterval(anim);
+      gun.src = preloadedImages[currentWeapon].frames[0].src;
+      isShooting = false;
+    }
+  }, 100);
+}
+
+// Reload weapon
+function reloadWeapon() {
+  if (isReloading || ammo === weapons[currentWeapon].ammoMax) return;
+  isReloading = true;
+  const reloadSound = new Audio(weapons[currentWeapon].reloadSound);
+  reloadSound.play();
+
+  let frameIndex = 0;
+  gun.src = preloadedImages[currentWeapon].reload[frameIndex].src;
+  const anim = setInterval(() => {
+    frameIndex++;
+    if (frameIndex < preloadedImages[currentWeapon].reload.length) {
+      gun.src = preloadedImages[currentWeapon].reload[frameIndex].src;
+    } else {
+      clearInterval(anim);
+      ammo = weapons[currentWeapon].ammoMax;
+      updateAmmoDisplay();
+      gun.src = preloadedImages[currentWeapon].frames[0].src;
+      isReloading = false;
+    }
+  }, 200);
+}
+
+// Mouse click to shoot
+document.addEventListener("click", shootWeapon);
+
+// --- Game loop ---
+function gameLoop() {
+  const dirX = Math.cos(playerAngle);
+  const dirY = Math.sin(playerAngle);
+  const planeX = -dirY * planeLength;
+  const planeY = dirX * planeLength;
+
+  // Movement
+  if (keys["w"]) { if (map[Math.floor(posY)][Math.floor(posX + dirX * moveSpeed)] === 0) posX += dirX * moveSpeed; if (map[Math.floor(posY + dirY * moveSpeed)][Math.floor(posX)] === 0) posY += dirY * moveSpeed; }
+  if (keys["s"]) { if (map[Math.floor(posY)][Math.floor(posX - dirX * moveSpeed)] === 0) posX -= dirX * moveSpeed; if (map[Math.floor(posY - dirY * moveSpeed)][Math.floor(posX)] === 0) posY -= dirY * moveSpeed; }
+  if (keys["a"]) { const strafeX = Math.cos(playerAngle - Math.PI/2); const strafeY = Math.sin(playerAngle - Math.PI/2); if (map[Math.floor(posY)][Math.floor(posX + strafeX * moveSpeed)] === 0) posX += strafeX * moveSpeed; if (map[Math.floor(posY + strafeY * moveSpeed)][Math.floor(posX)] === 0) posY += strafeY * moveSpeed; }
+  if (keys["d"]) { const strafeX = Math.cos(playerAngle + Math.PI/2); const strafeY = Math.sin(playerAngle + Math.PI/2); if (map[Math.floor(posY)][Math.floor(posX + strafeX * moveSpeed)] === 0) posX += strafeX * moveSpeed; if (map[Math.floor(posY + strafeY * moveSpeed)][Math.floor(posX)] === 0) posY += strafeY * moveSpeed; }
+
+  // Render walls
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for (let x = 0; x < canvas.width; x++) {
+    const cameraX = 2*x/canvas.width - 1;
+    const rayDirX = dirX + planeX*cameraX;
+    const rayDirY = dirY + planeY*cameraX;
+
+    let mapX = Math.floor(posX);
+    let mapY = Math.floor(posY);
+    let sideDistX, sideDistY;
+    const deltaDistX = Math.abs(1/rayDirX);
+    const deltaDistY = Math.abs(1/rayDirY);
+    let perpWallDist;
+    let stepX, stepY;
+    let hit=0, side;
+
+    if (rayDirX<0){stepX=-1; sideDistX=(posX-mapX)*deltaDistX;}
+    else {stepX=1; sideDistX=(mapX+1-posX)*deltaDistX;}
+    if (rayDirY<0){stepY=-1; sideDistY=(posY-mapY)*deltaDistY;}
+    else {stepY=1; sideDistY=(mapY+1-posY)*deltaDistY;}
+
+    while(hit===0){
+      if(sideDistX<sideDistY){sideDistX+=deltaDistX; mapX+=stepX; side=0;}
+      else {sideDistY+=deltaDistY; mapY+=stepY; side=1;}
+      if(map[mapY][mapX]>0) hit=1;
+    }
+
+    if(side===0) perpWallDist=(mapX-posX+(1-stepX)/2)/rayDirX;
+    else perpWallDist=(mapY-posY+(1-stepY)/2)/rayDirY;
+
+    const lineHeight = Math.floor(canvas.height/perpWallDist);
+    let drawStart = -lineHeight/2+canvas.height/2;
+    if(drawStart<0) drawStart=0;
+    let drawEnd = lineHeight/2+canvas.height/2;
+    if(drawEnd>=canvas.height) drawEnd=canvas.height-1;
+
+    ctx.strokeStyle=side?"darkred":"red";
+    ctx.beginPath();
+    ctx.moveTo(x, drawStart);
+    ctx.lineTo(x, drawEnd);
+    ctx.stroke();
+  }
+
+  // Crosshair
+  ctx.strokeStyle="white";
+  ctx.lineWidth=2;
+  const centerX=canvas.width/2;
+  const centerY=canvas.height/2;
+  const size=15;
+  ctx.beginPath();
+  ctx.moveTo(centerX-size, centerY);
+  ctx.lineTo(centerX+size, centerY);
+  ctx.moveTo(centerX, centerY-size);
+  ctx.lineTo(centerX, centerY+size);
+  ctx.stroke();
+
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+</script>
+</body>
+</html>
